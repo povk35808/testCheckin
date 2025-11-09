@@ -13,18 +13,18 @@ import {
     collection,
     onSnapshot,
     setLogLevel,
-    query, // <-- ថ្មី
-    where, // <-- ថ្មី
-    getDocs // <-- ថ្មី
+    query,
+    where,
+    getDocs
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // --- Global Variables ---
-let db, auth, leaveDb; // <-- leaveDb ថ្មី
+let db, auth, leaveDb;
 let allEmployees = [];
 let globalAttendanceList = [];
 let currentUser = null;
 let currentUserShift = null;
-let currentUserLeave = null; // <-- ថ្មី
+let currentUserLeave = null;
 let attendanceCollectionRef = null;
 let attendanceListener = null;
 let currentConfirmCallback = null;
@@ -58,7 +58,7 @@ const COL_INDEX = {
 };
 
 // --- Firebase Configuration (Attendance) ---
-const attendanceFirebaseConfig = { // <-- ប្តូរឈ្មោះ
+const attendanceFirebaseConfig = {
     apiKey: "AIzaSyCgc3fq9mDHMCjTRRHD3BPBL31JkKZgXFc",
     authDomain: "checkme-10e18.firebaseapp.com",
     projectId: "checkme-10e18",
@@ -69,7 +69,7 @@ const attendanceFirebaseConfig = { // <-- ប្តូរឈ្មោះ
 };
 
 // --- Firebase Configuration (Leave) ---
-const leaveFirebaseConfig = { // <-- ថ្មី
+const leaveFirebaseConfig = {
     apiKey: "AIzaSyDjr_Ha2RxOWEumjEeSdluIW3JmyM76mVk",
     authDomain: "dipermisstion.firebaseapp.com",
     projectId: "dipermisstion",
@@ -127,7 +127,7 @@ const cameraLoadingText = document.getElementById('cameraLoadingText');
 const cameraHelpText = document.getElementById('cameraHelpText');
 const captureButton = document.getElementById('captureButton');
 
-// *** ថ្មី: DOM Elements សម្រាប់ Search UI ***
+// *** DOM Elements សម្រាប់ Search UI ***
 const employeeListHeader = document.getElementById('employeeListHeader');
 const employeeListHelpText = document.getElementById('employeeListHelpText');
 const searchContainer = document.getElementById('searchContainer');
@@ -216,7 +216,7 @@ function formatDate(date) {
     }
 }
 
-// --- ថ្មី: Helper សម្រាប់ទ្រង់ទ្រាយកាលបរិច្ឆេទ Query ច្បាប់ ---
+// Helper សម្រាប់ទ្រង់ទ្រាយកាលបរិច្ឆេទ Query ច្បាប់
 function getTodayForLeaveQuery(date = new Date()) {
     const day = String(date.getDate()).padStart(2, '0');
     const month = monthNames[date.getMonth()];
@@ -224,7 +224,6 @@ function getTodayForLeaveQuery(date = new Date()) {
     return `${day}-${month}-${year}`; // e.g., "09-Nov-2025"
 }
 
-// (លែងត្រូវការ parseImageUrl ទៀតហើយ)
 
 function checkShiftTime(shiftType, checkType) {
     if (!shiftType || shiftType === 'N/A') {
@@ -511,7 +510,6 @@ async function handleCaptureAndAnalyze() {
 
 async function initializeAppFirebase() {
     try {
-        // --- ថ្មី: Initialize App ទាំងពីរ ---
         // App ទី 1: សម្រាប់ Attendance (Default)
         const attendanceApp = initializeApp(attendanceFirebaseConfig, "attendanceApp");
         db = getFirestore(attendanceApp);
@@ -520,8 +518,7 @@ async function initializeAppFirebase() {
         // App ទី 2: សម្រាប់ Leave
         const leaveApp = initializeApp(leaveFirebaseConfig, "leaveApp");
         leaveDb = getFirestore(leaveApp);
-        // (App ទីពីរ មិនត្រូវការ Auth ទេ ព្រោះយើង Sign In អនាមិកតែម្តង)
-
+        
         setLogLevel('debug');
         await setupAuthListener(); 
     } catch (error) {
@@ -624,7 +621,7 @@ async function fetchGoogleSheetData() {
     } catch (error) {
         console.error('Fetch Google Sheet Error:', error);
         showMessage('បញ្ហាទាញទិន្នន័យ', `មិនអាចទាញទិន្នន័យពី Google Sheet បានទេ។ សូមប្រាកដថា Sheet ត្រូវបាន Publish to the web។ Error: ${error.message}`, true);
-}
+    }
 }
 
 function renderEmployeeList(employees) {
@@ -654,10 +651,11 @@ function renderEmployeeList(employees) {
     });
 }
 
+// --- *** បានកែប្រែ (UPDATED) *** ---
 function selectUser(employee) {
     console.log('User selected:', employee);
     currentUser = employee;
-    currentUserLeave = null; // <-- ថ្មី: Reset មុនពេលជ្រើសរើស
+    currentUserLeave = null; 
     
     localStorage.setItem('savedEmployeeId', employee.id);
 
@@ -686,10 +684,11 @@ function selectUser(employee) {
     profileShift.textContent = `វេនថ្ងៃនេះ: ${currentUserShift}`;
 
     changeView('attendanceView');
-    setupAttendanceListener(); // ហៅ (call) មុនគេ
+    setupAttendanceListener(); 
 
-    // --- ថ្មី: ទាញទិន្នន័យច្បាប់ ---
-    fetchLeaveData(employee.id); // ហៅ (call) បន្ទាប់
+    // --- បានកែប្រែ (UPDATED) ---
+    // ហៅ (call) fetchLeaveData ដោយបញ្ជូនទាំង ID និង Name
+    fetchLeaveData(employee.name); 
 
     // រៀបចំ Face Matcher នៅ Background
     prepareFaceMatcher(employee.photoUrl);
@@ -698,17 +697,15 @@ function selectUser(employee) {
     searchInput.value = '';
 }
 
-// --- ថ្មី: អនុគមន៍ទាញទិន្នន័យច្បាប់ ---
-async function fetchLeaveData(employeeId) {
-    if (!leaveDb) return; // បញ្ឈប់ប្រសិនបើ DB ទីពីរមិនទាន់រួចរាល់
+// --- *** បានកែប្រែ (UPDATED): អនុគមន៍ទាញទិន្នន័យច្បាប់ *** ---
+async function fetchLeaveData(employeeName) { // ឥឡូវទទួល 'name'
+    if (!leaveDb) return; 
 
-    currentUserLeave = null; // Reset
+    currentUserLeave = null; 
     const todayDateStr = getTodayForLeaveQuery(); // យកទ្រង់ទ្រាយ "DD-Mon-YYYY"
-    // បម្លែង ID ពី "DI-439" ទៅ "439" (ប្រសិនបើ ID ក្នុង Sheet មាន "DI-")
-    // ប្រសិនបើ ID ក្នុង Sheet គឺ "439" រួចហើយ វានឹងនៅតែ "439"
-    const employeeIdStr = String(employeeId).replace('DI-', '');
-
-    console.log(`Checking leave data for ID: ${employeeIdStr} on date: ${todayDateStr}`);
+    
+    // --- បានកែប្រែ (UPDATED): Query ដោយប្រើ 'name' និង 'returnStatus' ---
+    console.log(`Checking leave data for Name: ${employeeName} on date: ${todayDateStr}`);
 
     try {
         const collectionsToQuery = ['leave_requests', 'out_requests'];
@@ -716,17 +713,16 @@ async function fetchLeaveData(employeeId) {
 
         for (const collName of collectionsToQuery) {
             const q = query(collection(leaveDb, collName),
-                where("userId", "==", employeeIdStr),
+                where("name", "==", employeeName), // <-- កែពី 'userId' ទៅ 'name'
                 where("startDate", "==", todayDateStr),
-                where("status", "==", "approved") // ត្រូវតែជា "approved"
+                where("returnStatus", "==", "បានអនុញ្ញាត") // <-- កែពី 'status' ទៅ 'returnStatus'
             );
 
             const querySnapshot = await getDocs(q);
             if (!querySnapshot.empty) {
-                // យ Lấy thông tin đầu tiên tìm thấy
                 foundLeave = querySnapshot.docs[0].data();
                 console.log(`Found approved leave in '${collName}':`, foundLeave);
-                break; // បញ្ឈប់ការស្វែងរក ពេលរកឃើញមួយ
+                break; 
             }
         }
 
@@ -738,10 +734,15 @@ async function fetchLeaveData(employeeId) {
 
     } catch (error) {
         console.error("Error fetching leave data:", error);
-        showMessage('បញ្ហាច្បាប់', `មិនអាចទាញទិន្នន័យច្បាប់បានទេ: ${error.message}`, true);
+        // កុំរំខានអ្នកប្រើប្រាស់ ប្រសិនបើគ្រាន់តែជា Error Permissions (បន្ទាប់ពីកែ Rules រួច)
+        if (!error.message.includes("permission")) {
+            showMessage('បញ្ហាច្បាប់', `មិនអាចទាញទិន្នន័យច្បាប់បានទេ: ${error.message}`, true);
+        } else {
+            console.warn("Permission issue fetching leave data. Check Firestore Rules.");
+        }
     }
 
-    // ហៅ (call) updateButtonState ម្តងទៀត ដើម្បីធ្វើបច្ចុប្បន្នភាព UI បន្ទាប់ពីពិនិត្យច្បាប់រួច
+    // ហៅ (call) updateButtonState ម្តងទៀត ដើម្បីធ្វើបច្ចុប្បន្នភាព UI
     updateButtonState();
 }
 
@@ -750,7 +751,7 @@ function logout() {
     currentUser = null;
     currentUserShift = null; 
     currentUserFaceMatcher = null; 
-    currentUserLeave = null; // <-- ថ្មី: Clear ទិន្នន័យច្បាប់
+    currentUserLeave = null; 
     
     localStorage.removeItem('savedEmployeeId');
 
@@ -792,7 +793,7 @@ function setupAttendanceListener() {
 
         console.log('Attendance data updated:', globalAttendanceList);
         renderHistory();
-        updateButtonState(); // ហៅ (call) នេះដើម្បី update ស្ថានភាពប៊ូតុង
+        updateButtonState(); 
         
     }, (error) => {
         console.error("Error listening to attendance:", error);
@@ -827,6 +828,7 @@ function renderHistory() {
     historyTableBody.appendChild(row);
 }
 
+// --- *** បានកែប្រែ (UPDATED): ធ្វើបច្ចុប្បន្នភាព UI របស់ប៊ូតុង *** ---
 function updateButtonState() {
     const todayString = getTodayDateString();
     const todayData = globalAttendanceList.find(record => record.date === todayString);
@@ -840,12 +842,13 @@ function updateButtonState() {
     attendanceStatus.textContent = 'សូមធ្វើការ Check-in';
     attendanceStatus.className = 'text-center text-sm text-blue-700 pb-4 px-6 h-5'; 
 
-    // --- ថ្មី: ពិនិត្យច្បាប់ (Leave Check) មុនគេ ---
+    // --- ពិនិត្យច្បាប់ (Leave Check) មុនគេ ---
     if (currentUserLeave) {
         const duration = currentUserLeave.duration;
         attendanceStatus.textContent = `មានច្បាប់៖ ${duration}`;
         attendanceStatus.className = 'text-center text-sm text-purple-700 pb-4 px-6 h-5';
 
+        // អនុវត្តច្បាប់បិទប៊ូតុង
         if (duration === 'មួយព្រឹក' || duration === 'មួយថ្ងៃ' || duration === 'មួយយប់') {
             checkInButton.disabled = true;
         }
@@ -853,8 +856,7 @@ function updateButtonState() {
             checkOutButton.disabled = true;
         }
     }
-    // --- ចប់ (End) ពិនិត្យច្បាប់ ---
-
+    
     // បន្ទាប់មក ពិនិត្យម៉ោងវេន (ប្រសិនបើមិនទាន់មានច្បាប់)
     if (!canCheckIn && !todayData && !currentUserLeave) {
          attendanceStatus.textContent = `ក្រៅម៉ោង Check-in (${currentUserShift})`;
@@ -864,15 +866,14 @@ function updateButtonState() {
     // បន្ទាប់មក ពិនិត្យទិន្នន័យវត្តមាន (Attendance Data)
     if (todayData) {
         if (todayData.checkIn) {
-            checkInButton.disabled = true; // បិទ CheckIn
-            checkOutButton.disabled = false; // បើក CheckOut (ប៉ុន្តែអាចនឹងបិទវិញដោយ Logic ច្បាប់)
+            checkInButton.disabled = true; 
+            checkOutButton.disabled = false; 
             attendanceStatus.textContent = `បាន Check-in ម៉ោង: ${todayData.checkIn}`;
             attendanceStatus.className = 'text-center text-sm text-green-700 pb-4 px-6 h-5';
             
-            // ថ្មី: បង្ហាញ cả hai (both)
+            // បង្ហាញ cả hai (both)
             if (currentUserLeave) {
                 attendanceStatus.textContent += ` (ច្បាប់៖ ${currentUserLeave.duration})`;
-                attendanceStatus.className = 'text-center text-sm text-green-700 pb-4 px-6 h-5';
             }
             
             // ពិនិត្យម៉ោង Check-out (ប្រសិនបើមិនទាន់មានច្បាប់)
@@ -888,7 +889,7 @@ function updateButtonState() {
         }
     }
 
-    // --- ថ្មី: អនុវត្តច្បាប់ (Leave Rules) ជាចុងក្រោយ (សំខាន់!) ---
+    // អនុវត្តច្បាប់ (Leave Rules) ជាចុងក្រោយ (សំខាន់!)
     // ធានាថា Logic ច្បាប់ ឈ្នះ Logic ផ្សេងទៀត
     if (currentUserLeave) {
         const duration = currentUserLeave.duration;
@@ -907,10 +908,7 @@ function updateButtonState() {
 async function handleCheckIn() {
     if (!attendanceCollectionRef || !currentUser) return;
     
-    // --- បានដកចេញ ---
-    // if (!checkShiftTime(currentUserShift, 'checkIn')) { ... }
-    // (ព្រោះបានពិនិត្យរួចហើយនៅក្នុង preCheckIn)
-    // --- จบ (End) ---
+    // (checkShiftTime ត្រូវបានពិនិត្យរួចហើយនៅក្នុង preCheckIn)
 
     checkInButton.disabled = true;
     checkOutButton.disabled = true;
@@ -961,7 +959,7 @@ async function handleCheckIn() {
         checkIn: formatTime(now),
         checkOut: null,
         checkInLocation: { lat: userCoords.latitude, lon: userCoords.longitude },
-        leaveStatus: currentUserLeave ? currentUserLeave.duration : null // <-- ថ្មី: រក្សាទុកស្ថានភាពច្បាប់
+        leaveStatus: currentUserLeave ? currentUserLeave.duration : null 
     };
 
     try {
@@ -982,10 +980,7 @@ async function handleCheckIn() {
 async function handleCheckOut() {
     if (!attendanceCollectionRef) return;
 
-    // --- បានដកចេញ ---
-    // if (!checkShiftTime(currentUserShift, 'checkOut')) { ... }
-    // (ព្រោះបានពិនិត្យរួចហើយនៅក្នុង preCheckOut)
-    // --- จบ (End) ---
+    // (checkShiftTime ត្រូវបានពិនិត្យរួចហើយនៅក្នុង preCheckOut)
 
     checkInButton.disabled = true;
     checkOutButton.disabled = true;
@@ -1025,7 +1020,7 @@ async function handleCheckOut() {
         checkOutTimestamp: now.toISOString(),
         checkOut: formatTime(now),
         checkOutLocation: { lat: userCoords.latitude, lon: userCoords.longitude },
-        leaveStatus: currentUserLeave ? currentUserLeave.duration : null // <-- ថ្មី: រក្សាទុកស្ថានភាពច្បាប់
+        leaveStatus: currentUserLeave ? currentUserLeave.duration : null 
     };
 
     try {
@@ -1091,11 +1086,11 @@ exitAppButton.addEventListener('click', () => {
     });
 });
 
-// --- ថ្មី: ប៊ូតុង Check-in/Out ហៅ (call) អនុគមន៍ Pre-Check ---
+// --- ប៊ូតុង Check-in/Out ហៅ (call) អនុគមន៍ Pre-Check ---
 checkInButton.addEventListener('click', preCheckIn);
 checkOutButton.addEventListener('click', preCheckOut);
 
-// --- ថ្មី: អនុគមន៍ Pre-Check (អ្នកយាមទ្វារ) ---
+// --- អនុគមន៍ Pre-Check (អ្នកយាមទ្វារ) ---
 function preCheckIn() {
     // 1. ពិនិត្យច្បាប់ (Leave Check) មុនគេ
     if (currentUserLeave) {
@@ -1106,7 +1101,7 @@ function preCheckIn() {
         }
     }
 
-    // 2. ពិនិត្យម៉ោងវេន (Shift Time Check) - Logic ចាស់
+    // 2. ពិនិត្យម៉ោងវេន (Shift Time Check)
     if (!checkShiftTime(currentUserShift, 'checkIn')) {
         showMessage('បញ្ហា', `ក្រៅម៉ោង Check-in សម្រាប់វេន "${currentUserShift}" របស់អ្នក។`, true);
         return; // បញ្ឈប់
@@ -1126,7 +1121,7 @@ function preCheckOut() {
         }
     }
 
-    // 2. ពិនិត្យម៉ោងវេន (Shift Time Check) - Logic ចាស់
+    // 2. ពិនិត្យម៉ោងវេន (Shift Time Check)
     if (!checkShiftTime(currentUserShift, 'checkOut')) {
         showMessage('បញ្ហា', `ក្រៅម៉ោង Check-out សម្រាប់វេន "${currentUserShift}" របស់អ្នក។`, true);
         return; // បញ្ឈប់
