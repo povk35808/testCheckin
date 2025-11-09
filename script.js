@@ -532,7 +532,7 @@ async function setupAuthListener() {
         // Auth Listener គឺសម្រាប់តែ App ទី 1 (Attendance)
         onAuthStateChanged(auth, async (user) => {
             if (user) {
-    _           console.log('Firebase Auth user signed in:', user.uid);
+              console.log('Firebase Auth user signed in:', user.uid);
                 await loadAIModels(); 
                 resolve();
             } else {
