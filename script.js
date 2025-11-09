@@ -464,7 +464,7 @@ async function handleCaptureAndAnalyze() {
                                      .withFaceLandmarks()
                                      .withFaceDescriptor();
 
-  _       if (!detection) {
+          if (!detection) {
             cameraLoadingText.textContent = 'រកមិនឃើញផ្ទៃមុខ!';
             cameraHelpText.textContent = 'សូមដាក់មុខឱ្យចំ រួចព្យាយាមម្តងទៀត។';
             captureButton.disabled = false; 
