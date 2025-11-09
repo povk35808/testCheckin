@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="km">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ប្រព័ន្ធវត្តមានបុគ្គលិក</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Kantumruy+Pro:wght@400;500;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
+
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body class="bg-gray-100 min-h-screen flex items-center justify-center p-0 md:p-4">
+
+    <div class="max-w-md w-full h-screen md:h-auto md:min-h-[700px] md:max-h-[90vh] bg-white md:rounded-2xl shadow-xl overflow-hidden flex flex-col relative">
+
+        <div id="loadingView" class="view p-8 flex flex-col items-center justify-center min-h-[400px] flex-1">
+            <img src="https://i.postimg.cc/FHBn0Fdf/di3-copy.png" alt="Company Logo" class="w-32 h-32 object-contain mb-6">
+            <div class="loader"></div>
+            <p id="loadingText" class="mt-4 text-gray-600 text-lg">កំពុងទាញទិន្នន័យបុគ្គលិក...</p>
+            <p class="text-sm text-gray-500">សូមរង់ចាំបន្តិច</p>
+        </div>
+
+        <div id="employeeListView" class="view flex flex-col flex-1" style="display: none;">
+            
+            <div id="employeeListHeader" class="p-6 pt-10 bg-gradient-to-r from-blue-600 to-blue-500 text-white flex flex-col items-center shadow-md">
+                <img src="https://i.postimg.cc/FHBn0Fdf/di3-copy.png" alt="Company Logo" class="w-24 h-24 object-contain mb-4 rounded-full border-4 border-white shadow-lg">
+                <h1 class="text-2xl font-bold text-center">ជ្រើសរើសបុគ្គ-លិក</h1>
+            </div>
+            
+            <p id="employeeListHelpText" class="text-center text-gray-700 text-md p-5 font-semibold">សូមអ្នកជ្រើសរើសគណនីដើម្បីស្កេនវត្តមាន</p>
+            
+            <div id="searchContainer" class="p-4 pt-0 relative"> 
+                <input type="text" id="searchInput"
+                    class="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="វាយឈ្មោះ ឬអត្តលេខ..."
+                    autocomplete="off">
+                
+                <div id="employeeListContainer" 
+                     class="absolute z-10 w-full left-0 top-full mt-2 bg-gray-100 border border-gray-200 rounded-xl shadow-lg max-h-80 overflow-y-auto p-2 hidden">
+                    </div>
+            </div>
+            <div class="flex-1"></div>
+        </div>
+
+        <div id="attendanceView" class="view flex flex-col flex-1" style="display: none;">
+            <div class="p-6 flex justify-between items-center">
+                <img src="https://i.postimg.cc/FHBn0Fdf/di3-copy.png" alt="Logo" class="w-12 h-12 object-contain">
+                
+                <div class="flex items-center space-x-4">
+                    <button id="logoutButton"
+                        class="flex items-center text-sm text-blue-600 hover:text-blue-800 transition-colors">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-1" fill="none" viewBox="0 0 24 24"
+                            stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round"
+                                d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                        </svg>
+                        ចាកចេញ
+                    </button>
+                    <button id="exitAppButton"
+                        class="flex items-center text-sm text-red-600 hover:text-red-800 transition-colors">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        បិទ
+                    </button>
+                </div>
+            </div>
+            
+            <h1 id="welcomeMessage" class="text-2xl font-bold text-gray-800 px-6 pb-4">សូមស្វាគមន៍</h1>
+
+            <div class="px-6 pb-6">
+                <div class="bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-xl shadow-lg p-5">
+                    <div class="flex items-center space-x-4 mb-4">
+                        <img id="profileImage" src="https://placehold.co/80x80/e2e8f0/64748b?text=Profile"
+                            onerror="this.src='https://placehold.co/80x80/e2e8f0/64748b?text=Error'"
+                            class="w-20 h-20 rounded-full border-4 border-white object-cover shadow-md">
+                        <div>
+                            <h2 id="profileName" class="text-2xl font-bold">ឈ្មោះបុគ្គលិក</h2>
+                            <p id="profileId" class="text-sm opacity-90">អត្តលេខ: </p>
+                            <p id="profileGender" class="text-sm opacity-90">ភេទ: </p>
+                        </div>
+                    </div>
+                    <div class="space-y-1 text-sm opacity-90">
+                        <p id="profileDepartment" class="font-medium">ផ្នែក: </p>
+                        <p id="profileGroup" class="font-medium">ក្រុម: </p>
+                        <p id="profileGrade" class="font-medium">ថ្នាក់: </p>
+                        <p id="profileShift" class="text-base font-bold text-yellow-300 mt-2">វេនថ្ងៃនេះ: </p>
+                    </div>
+                </div>
+            </div>
+
+
+            <div class="px-6 pb-6 grid grid-cols-2 gap-4">
+                <button id="checkInButton"
+                    class="flex items-center justify-center space-x-2 bg-green-500 text-white font-bold py-4 rounded-lg shadow-lg hover:bg-green-600 transition-all transform hover:scale-105 disabled:opacity-50 disabled:transform-none disabled:cursor-not-allowed">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24"
+                        stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" />
+                    </svg>
+                    <span>ចុះវត្តមានចូល</span>
+                </button>
+                <button id="checkOutButton"
+                    class="flex items-center justify-center space-x-2 bg-red-500 text-white font-bold py-4 rounded-lg shadow-lg hover:bg-red-600 transition-all transform hover:scale-105 disabled:opacity-50 disabled:transform-none disabled:cursor-not-allowed">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24"
+                        stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M13 16l4-4m0 0l-4-4m4 4H3m5 4v1a3 3 0 003 3h6a3 3 0 003-3V7a3 3 0 00-3-3h-6a3 3 0 00-3 3v1" />
+                    </svg>
+                    <span>ចុះវត្តមានចេញ</span>
+                </button>
+            </div>
+
+            <p id="attendanceStatus" class="text-center text-sm text-gray-500 pb-4 px-6 h-5"></p>
+
+            <div class="px-6 pb-6 flex flex-col flex-1 overflow-hidden">
+                <h3 class="text-lg font-bold text-gray-800 mb-3">ប្រវត្តិវត្តមានថ្ងៃនេះ</h3>
+                
+                <div class="shadow-sm border border-gray-200 rounded-lg overflow-y-auto flex-1">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead class="bg-gray-50 sticky top-0">
+                            <tr>
+                                <th scope="col" class="px-4 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wider">
+                                    កាលបរិច្ឆេទ
+                                </th>
+                                <th scope="col" class="px-4 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wider">
+                                    ចូល
+                                </th>
+                                <th scope="col" class="px-4 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wider">
+                                    ចេញ
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody id="historyTableBody" class="bg-white divide-y divide-gray-200">
+                            <tr id="noHistoryRow">
+                                <td colspan="3" class="px-4 py-4 text-center text-gray-500">
+                                    មិនទាន់មានទិន្នន័យថ្ងៃនេះ
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        
+        <footer class="bg-gray-800 text-white text-center p-3 text-xs shadow-inner">
+            @អភិវឌ្ឍន៍កម្មវិធី IT SUPPORT
+        </footer>
+    </div>
+
+    <div id="customModal"
+        class="modal modal-hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-50 backdrop-blur-sm">
+        <div
+            class="bg-white rounded-2xl shadow-xl w-full max-w-sm overflow-hidden transform transition-all duration-300">
+            <div id="modalHeader" class="p-6">
+                <h3 id="modalTitle" class="text-2xl font-bold text-center text-gray-800"></h3>
+            </div>
+            <div class="p-6 pt-0">
+                <p id="modalMessage" class="text-center text-gray-600"></p>
+            </div>
+            <div id="modalActions" class="p-4 bg-gray-50 grid grid-cols-2 gap-3">
+                <button id="modalCancelButton"
+                    class="w-full bg-gray-200 text-gray-800 font-bold py-3 px-4 rounded-lg hover:bg-gray-300 transition-colors focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-opacity-50">
+                    បោះបង់
+                </button>
+                <button id="modalConfirmButton"
+                    class="w-full bg-blue-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-blue-700 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50">
+                    យល់ព្រម
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div id="cameraModal"
+        class="modal modal-hidden fixed inset-0 z-[60] flex flex-col items-center justify-center p-0 bg-gray-900 bg-opacity-90 backdrop-blur-sm">
+        
+        <div class="absolute top-4 right-4 z-[70]">
+            <button id="cameraCloseButton" class="text-white bg-red-500 rounded-full w-8 h-8 flex items-center justify-center shadow-lg">
+                &times;
+            </button>
+        </div>
+
+        <div class="relative flex flex-col items-center justify-center">
+
+            <div class="relative w-full max-w-md h-[400px] bg-gray-800 rounded-lg overflow-hidden shadow-2xl border-4 border-gray-700">
+                <video id="videoElement" autoplay muted playsinline class="w-full h-full object-cover"></video>
+                <canvas id="cameraCanvas" class="absolute top-0 left-0 w-full h-full" style="display: none;"></canvas>
+            </div>
+
+            <div id="cameraLoadingContainer" class="text-center p-4 min-h-[60px]">
+                <p id="cameraLoadingText" class="text-white text-lg font-semibold">
+                    កំពុងបើកកាមេរ៉ា...
+                </p>
+                <p id="cameraHelpText" class="text-gray-300 text-sm">សូមដាក់មុខរបស់អ្នកឱ្យចំកាមេរ៉ា</p>
+            </div>
+
+            <button id="captureButton"
+                class="capture-button"
+                style="display: none;">
+                <div class="capture-button-inner"></div>
+            </button>
+
+        </div>
+    </div>
+
+
+    <script type="module" src="script.js"></script>
+
+</body>
+</html>
