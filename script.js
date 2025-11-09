@@ -464,7 +464,7 @@ async function handleCaptureAndAnalyze() {
                                      .withFaceLandmarks()
                                      .withFaceDescriptor();
 
-        if (!detection) {
+  _       if (!detection) {
             cameraLoadingText.textContent = 'រកមិនឃើញផ្ទៃមុខ!';
             cameraHelpText.textContent = 'សូមដាក់មុខឱ្យចំ រួចព្យាយាមម្តងទៀត។';
             captureButton.disabled = false; 
@@ -532,7 +532,7 @@ async function setupAuthListener() {
         // Auth Listener គឺសម្រាប់តែ App ទី 1 (Attendance)
         onAuthStateChanged(auth, async (user) => {
             if (user) {
-                console.log('Firebase Auth user signed in:', user.uid);
+    _           console.log('Firebase Auth user signed in:', user.uid);
                 await loadAIModels(); 
                 resolve();
             } else {
@@ -651,7 +651,6 @@ function renderEmployeeList(employees) {
     });
 }
 
-// --- *** បានកែប្រែ (UPDATED) *** ---
 function selectUser(employee) {
     console.log('User selected:', employee);
     currentUser = employee;
@@ -686,7 +685,6 @@ function selectUser(employee) {
     changeView('attendanceView');
     setupAttendanceListener(); 
 
-    // --- បានកែប្រែ (UPDATED) ---
     // ហៅ (call) fetchLeaveData ដោយបញ្ជូនទាំង ID និង Name
     fetchLeaveData(employee.name); 
 
@@ -697,44 +695,51 @@ function selectUser(employee) {
     searchInput.value = '';
 }
 
-// --- *** បានកែប្រែ (UPDATED): អនុគមន៍ទាញទិន្នន័យច្បាប់ *** ---
-async function fetchLeaveData(employeeName) { // ឥឡូវទទួល 'name'
+// --- *** បានកែប្រែ (UPDATED): អនុគមន៍ទាញទិន្នន័យច្បាប់ (កែបញ្ហា Index) *** ---
+async function fetchLeaveData(employeeName) { 
     if (!leaveDb) return; 
 
     currentUserLeave = null; 
     const todayDateStr = getTodayForLeaveQuery(); // យកទ្រង់ទ្រាយ "DD-Mon-YYYY"
     
-    // --- បានកែប្រែ (UPDATED): Query ដោយប្រើ 'name' និង 'returnStatus' ---
     console.log(`Checking leave data for Name: ${employeeName} on date: ${todayDateStr}`);
 
     try {
         const collectionsToQuery = ['leave_requests', 'out_requests'];
-        let foundLeave = null;
+        let allLeaveRequests = []; // ផ្ទុកលទ្ធផល Query ទាំងអស់
 
         for (const collName of collectionsToQuery) {
+            // --- ថ្មី: Query តែលើ "name" មួយគត់ (មិនត្រូវការ Index) ---
             const q = query(collection(leaveDb, collName),
-                where("name", "==", employeeName), // <-- កែពី 'userId' ទៅ 'name'
-                where("startDate", "==", todayDateStr),
-                where("returnStatus", "==", "បានអនុញ្ញាត") // <-- កែពី 'status' ទៅ 'returnStatus'
+                where("name", "==", employeeName)
             );
 
             const querySnapshot = await getDocs(q);
-            if (!querySnapshot.empty) {
-                foundLeave = querySnapshot.docs[0].data();
-                console.log(`Found approved leave in '${collName}':`, foundLeave);
-                break; 
-            }
+            querySnapshot.forEach(doc => {
+                allLeaveRequests.push(doc.data()); // ប្រមូលលទ្ធផលទាំងអស់
+            });
         }
 
+        console.log(`Found ${allLeaveRequests.length} total leave/out requests for ${employeeName}`);
+
+        // --- ថ្មី: ត្រង (Filter) លទ្ធផលដោយ JavaScript ---
+        const foundLeave = allLeaveRequests.find(leave => {
+            // ពិនិត្យលក្ខខណ្ឌទាំងពីរ
+            const isToday = leave.startDate === todayDateStr;
+            const isApproved = leave.returnStatus === "បានអនុញ្ញាត";
+            return isToday && isApproved;
+        });
+
         if (foundLeave) {
-            currentUserLeave = foundLeave;
+            console.log("SUCCESS: Found approved leave for today:", foundLeave);
+            currentUserLeave = foundLeave; // កំណត់ Global Variable
         } else {
-            console.log("No approved leave found for today.");
+            console.log("No approved leave found for today after filtering.");
         }
 
     } catch (error) {
         console.error("Error fetching leave data:", error);
-        // កុំរំខានអ្នកប្រើប្រាស់ ប្រសិនបើគ្រាន់តែជា Error Permissions (បន្ទាប់ពីកែ Rules រួច)
+        // កុំរំខានអ្នកប្រើប្រាស់ ប្រសិនបើគ្រាន់តែជា Error Permissions
         if (!error.message.includes("permission")) {
             showMessage('បញ្ហាច្បាប់', `មិនអាចទាញទិន្នន័យច្បាប់បានទេ: ${error.message}`, true);
         } else {
@@ -742,7 +747,7 @@ async function fetchLeaveData(employeeName) { // ឥឡូវទទួល 'name'
         }
     }
 
-    // ហៅ (call) updateButtonState ម្តងទៀត ដើម្បីធ្វើបច្ចុប្បន្នភាព UI
+    // --- ថ្មី: ធ្វើបច្ចុប្បន្នភាព UI បន្ទាប់ពីត្រួតពិនិត្យរួចរាល់ ---
     updateButtonState();
 }
 
@@ -828,7 +833,6 @@ function renderHistory() {
     historyTableBody.appendChild(row);
 }
 
-// --- *** បានកែប្រែ (UPDATED): ធ្វើបច្ចុប្បន្នភាព UI របស់ប៊ូតុង *** ---
 function updateButtonState() {
     const todayString = getTodayDateString();
     const todayData = globalAttendanceList.find(record => record.date === todayString);
@@ -904,7 +908,7 @@ function updateButtonState() {
 
 /**
  * 10. ដំណើរការ Check In (បន្ទាប់ពីស្កេនមុខ)
- */
+*/
 async function handleCheckIn() {
     if (!attendanceCollectionRef || !currentUser) return;
     
