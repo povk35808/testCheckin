@@ -14,12 +14,11 @@ import {
     onSnapshot,
     setLogLevel
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-// << បានលុប query, where, orderBy
 
 // --- Global Variables ---
 let db, auth;
 let allEmployees = [];
-let currentMonthRecords = []; // << បានប្តូរឈ្មោះពី globalAttendanceList
+let currentMonthRecords = [];
 let currentUser = null;
 let currentUserShift = null;
 let attendanceCollectionRef = null;
@@ -32,8 +31,6 @@ let currentUserFaceMatcher = null;
 let currentScanAction = null; // 'checkIn' or 'checkOut'
 let videoStream = null;
 const FACE_MATCH_THRESHOLD = 0.5;
-
-// << បានលុប Pagination State
 
 // --- Google Sheet Configuration ---
 const SHEET_ID = '1eRyPoifzyvB4oBmruNyXcoKMKPRqjk6xDD6-bPNW6pc';
@@ -98,9 +95,6 @@ const checkOutButton = document.getElementById('checkOutButton');
 const attendanceStatus = document.getElementById('attendanceStatus');
 const historyTableBody = document.getElementById('historyTableBody');
 const noHistoryRow = document.getElementById('noHistoryRow');
-
-// << បានលុប Pagination DOM Elements
-
 const customModal = document.getElementById('customModal');
 const modalTitle = document.getElementById('modalTitle');
 const modalMessage = document.getElementById('modalMessage');
@@ -177,22 +171,30 @@ function hideMessage() {
     currentConfirmCallback = null; 
 }
 
+// << ថ្មី: បានកែ Bug Timezone >>
 function getTodayDateString(date = new Date()) {
-    return date.toISOString().split('T')[0];
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0'); // 0-11 -> 01-12
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
 }
 
-// << ថ្មី: មុខងារជំនួយសម្រាប់យកថ្ងៃទី ១ និងថ្ងៃចុងក្រោយនៃខែ >>
+// << ថ្មី: បានកែ Bug Timezone >>
 function getCurrentMonthRange() {
     const now = new Date();
     const year = now.getFullYear();
-    const month = now.getMonth(); // 0-11
+    // យក "MM" (ឧ. "11" សម្រាប់ខែវិច្ឆិកា)
+    const monthString = String(now.getMonth() + 1).padStart(2, '0');
     
-    // ថ្ងៃទី ១ នៃខែនេះ (ម៉ោង 00:00:00)
-    const startOfMonth = new Date(year, month, 1).toISOString().split('T')[0];
+    // យកថ្ងៃចុងក្រោយនៃខែ (ឧ. "30" សម្រាប់ខែវិច្ឆិកា)
+    const lastDay = new Date(year, now.getMonth() + 1, 0).getDate();
+    const lastDayString = String(lastDay).padStart(2, '0');
     
-    // ថ្ងៃចុងក្រោយនៃខែនេះ (ថ្ងៃទី 0 នៃខែបន្ទាប់)
-    const endOfMonth = new Date(year, month + 1, 0).toISOString().split('T')[0];
+    const startOfMonth = `${year}-${monthString}-01`;
+    const endOfMonth = `${year}-${monthString}-${lastDayString}`;
 
+    // នឹង return (ឧ.) "2025-11-01" និង "2025-11-30"
+    console.log(`Current month range: ${startOfMonth} to ${endOfMonth}`);
     return { startOfMonth, endOfMonth };
 }
 
@@ -693,7 +695,7 @@ function logout() {
     }
     
     attendanceCollectionRef = null;
-    currentMonthRecords = []; // << បានកែប្រែ
+    currentMonthRecords = []; 
     
     historyTableBody.innerHTML = '';
     if (noHistoryRow) {
@@ -706,7 +708,6 @@ function logout() {
     changeView('employeeListView');
 }
 
-// << ថ្មី: ជំនួស Function ទាំងមូល >>
 function setupAttendanceListener() {
     if (!attendanceCollectionRef) return;
     
@@ -719,7 +720,6 @@ function setupAttendanceListener() {
     attendanceStatus.textContent = 'កំពុងទាញប្រវត្តិវត្តមាន...';
     attendanceStatus.className = 'text-center text-sm text-gray-500 pb-4 px-6 h-5 animate-pulse';
 
-    // មិនប្រើ Query ទៀតទេ
     attendanceListener = onSnapshot(attendanceCollectionRef, (querySnapshot) => {
         
         let allRecords = [];
@@ -739,7 +739,7 @@ function setupAttendanceListener() {
 
         console.log(`Attendance data updated: ${currentMonthRecords.length} records this month.`);
         
-        renderHistory(); // ហៅ render បែប (មិនមែន) Pagination
+        renderHistory(); 
         updateButtonState();
         
     }, (error) => {
@@ -750,7 +750,7 @@ function setupAttendanceListener() {
     });
 }
 
-// << ថ្មី: ជំនួស Function ទាំងមូល >>
+// << ថ្មី: ជំនួស Function ទាំងមូល (បន្ថែម Logic អវត្តមាន) >>
 function renderHistory() {
     historyTableBody.innerHTML = ''; // Clear table
     
@@ -763,29 +763,38 @@ function renderHistory() {
         return;
     }
 
-    // --- ថ្មី: បង្កើត HTML សម្រាប់ទិន្នន័យ "ទាំងអស់" ក្នុងខែ ---
+    // --- ថ្មី: យកកាលបរិច្ឆេទថ្ងៃនេះមកប្រៀបធៀប ---
+    const todayString = getTodayDateString();
+
     currentMonthRecords.forEach(record => {
-        const checkInTime = record.checkIn || '---';
-        const checkOutTime = record.checkOut ? record.checkOut : '<span class="text-gray-400">មិនទាន់ចេញ</span>';
         const formattedDate = record.formattedDate || record.date;
+        const isToday = (record.date === todayString);
+
+        // --- ថ្មី: Logic សម្រាប់ Check-In ---
+        const checkInDisplay = record.checkIn
+            ? `<span class="text-green-600 font-semibold">${record.checkIn}</span>` // មានទិន្នន័យ
+            : (isToday ? '---' : '<span class="text-red-500 font-semibold">អវត្តមាន</span>'); // គ្មានទិន្នន័យ
+
+        // --- ថ្មី: Logic សម្រាប់ Check-Out ---
+        const checkOutDisplay = record.checkOut
+            ? `<span class="text-red-600 font-semibold">${record.checkOut}</span>` // មានទិន្នន័យ
+            : (isToday ? '<span class="text-gray-400">មិនទាន់ចេញ</span>' : '<span class="text-red-500 font-semibold">អវត្តមាន</span>'); // គ្មានទិន្នន័យ
 
         const row = document.createElement('tr');
         row.className = 'hover:bg-gray-50';
         row.innerHTML = `
             <td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-800">${formattedDate}</td>
-            <td class="px-4 py-3 whitespace-nowrap text-sm text-green-600 font-semibold">${checkInTime}</td>
-            <td class="px-4 py-3 whitespace-nowrap text-sm ${record.checkOut ? 'text-red-600 font-semibold' : ''}">${checkOutTime}</td>
+            <td class="px-4 py-3 whitespace-nowrap text-sm">${checkInDisplay}</td>
+            <td class="px-4 py-3 whitespace-nowrap text-sm">${checkOutDisplay}</td>
         `;
         historyTableBody.appendChild(row);
     });
-
-    // << បានលុប UI របស់ Pagination
 }
+
 
 function updateButtonState() {
     const todayString = getTodayDateString();
     
-    // << បានកែប្រែ: ប្រើ currentMonthRecords >>
     const todayData = currentMonthRecords.find(record => record.date === todayString);
     
     const canCheckIn = checkShiftTime(currentUserShift, 'checkIn');
@@ -1038,8 +1047,6 @@ cameraCloseButton.addEventListener('click', hideCameraModal);
 
 // ប៊ូតុងថត ហៅ handleCaptureAndAnalyze
 captureButton.addEventListener('click', handleCaptureAndAnalyze);
-
-// << បានលុប Pagination Event Listeners
 
 // --- Initial Call ---
 document.addEventListener('DOMContentLoaded', () => {
