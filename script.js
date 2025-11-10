@@ -12,13 +12,16 @@ import {
     updateDoc,
     collection,
     onSnapshot,
-    setLogLevel
+    setLogLevel,
+    query, // << ថ្មី: នាំចូល Query
+    where, // << ថ្មី: នាំចូល Where
+    orderBy // << ថ្មី: នាំចូល OrderBy
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // --- Global Variables ---
 let db, auth;
 let allEmployees = [];
-let globalAttendanceList = [];
+let currentMonthRecords = []; // << បានប្តូរឈ្មោះពី globalAttendanceList
 let currentUser = null;
 let currentUserShift = null;
 let attendanceCollectionRef = null;
@@ -31,6 +34,10 @@ let currentUserFaceMatcher = null;
 let currentScanAction = null; // 'checkIn' or 'checkOut'
 let videoStream = null;
 const FACE_MATCH_THRESHOLD = 0.5;
+
+// --- Pagination State --- // << ថ្មី: អថេរសម្រាប់ Pagination
+let currentPage = 1;
+const itemsPerPage = 12; // ១២ Item ក្នុងមួយទំព័រ
 
 // --- Google Sheet Configuration ---
 const SHEET_ID = '1eRyPoifzyvB4oBmruNyXcoKMKPRqjk6xDD6-bPNW6pc';
@@ -95,6 +102,12 @@ const checkOutButton = document.getElementById('checkOutButton');
 const attendanceStatus = document.getElementById('attendanceStatus');
 const historyTableBody = document.getElementById('historyTableBody');
 const noHistoryRow = document.getElementById('noHistoryRow');
+
+// << ថ្មី: DOM Elements សម្រាប់ Pagination >>
+const prevPageButton = document.getElementById('prevPageButton');
+const nextPageButton = document.getElementById('nextPageButton');
+const pageIndicator = document.getElementById('pageIndicator');
+
 const customModal = document.getElementById('customModal');
 const modalTitle = document.getElementById('modalTitle');
 const modalMessage = document.getElementById('modalMessage');
@@ -341,8 +354,8 @@ async function prepareFaceMatcher(imageUrl) {
         profileName.textContent = 'កំពុងវិភាគរូបថត...';
         const img = await faceapi.fetchImage(imageUrl);
         const detection = await faceapi.detectSingleFace(img, new faceapi.TinyFaceDetectorOptions())
-                                     .withFaceLandmarks()
-                                     .withFaceDescriptor();
+                                        .withFaceLandmarks()
+                                        .withFaceDescriptor();
         
         if (detection) {
             currentUserFaceMatcher = new faceapi.FaceMatcher(detection.descriptor);
@@ -437,8 +450,8 @@ async function handleCaptureAndAnalyze() {
 
     try {
         const detection = await faceapi.detectSingleFace(cameraCanvas, new faceapi.TinyFaceDetectorOptions())
-                                     .withFaceLandmarks()
-                                     .withFaceDescriptor();
+                                        .withFaceLandmarks()
+                                        .withFaceDescriptor();
 
         if (!detection) {
             cameraLoadingText.textContent = 'រកមិនឃើញផ្ទៃមុខ!';
@@ -675,39 +688,58 @@ function logout() {
     }
     
     attendanceCollectionRef = null;
-    globalAttendanceList = [];
+    currentMonthRecords = []; // << បានកែប្រែ
     
     historyTableBody.innerHTML = '';
-    historyTableBody.appendChild(noHistoryRow);
+    if (noHistoryRow) historyTableBody.appendChild(noHistoryRow); // << ត្រូវប្រាកដថា បន្ថែម noHistoryRow វិញ
     searchInput.value = ''; 
     employeeListContainer.classList.add('hidden'); 
     
     changeView('employeeListView');
 }
 
+// << ថ្មី: ជំនួស Function ទាំងមូល >>
 function setupAttendanceListener() {
     if (!attendanceCollectionRef) return;
     
     if (attendanceListener) {
-        attendanceListener();
+        attendanceListener(); // Stop old listener
     }
 
     checkInButton.disabled = true;
     checkOutButton.disabled = true;
     attendanceStatus.textContent = 'កំពុងទាញប្រវត្តិវត្តមាន...';
-    attendanceStatus.className = 'text-center text-sm text-gray-500 pb-4 px-6 h-5 animate-pulse'; 
+    attendanceStatus.className = 'text-center text-sm text-gray-500 pb-4 px-6 h-5 animate-pulse';
 
-    attendanceListener = onSnapshot(attendanceCollectionRef, (querySnapshot) => {
-        globalAttendanceList = [];
-        querySnapshot.forEach((doc) => {
-            globalAttendanceList.push(doc.data());
-        });
+    // --- ថ្មី: កំណត់ចន្លោះពេល (Start/End) នៃខែបច្ចុប្បន្ន ---
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = now.getMonth(); // 0-11
+    
+    // ថ្ងៃទី ១ នៃខែនេះ (ម៉ោង 00:00:00)
+    const startOfMonth = new Date(year, month, 1).toISOString().split('T')[0];
+    
+    // ថ្ងៃចុងក្រោយនៃខែនេះ (ថ្ងៃទី 0 នៃខែបន្ទាប់)
+    const endOfMonth = new Date(year, month + 1, 0).toISOString().split('T')[0];
+    
+    console.log(`Listening for records from ${startOfMonth} to ${endOfMonth}`);
 
-        globalAttendanceList.sort((a, b) => (b.date || "").localeCompare(a.date || ""));
+    // --- ថ្មី: បង្កើត Query ---
+    const q = query(attendanceCollectionRef,
+        where('date', '>=', startOfMonth),
+        where('date', '<=', endOfMonth),
+        orderBy('date', 'desc') // តម្រៀបពីថ្មីទៅចាស់
+    );
 
-        console.log('Attendance data updated:', globalAttendanceList);
-        renderHistory();
-        updateButtonState(); 
+    attendanceListener = onSnapshot(q, (querySnapshot) => {
+        
+        currentMonthRecords = querySnapshot.docs.map(doc => doc.data());
+
+        console.log(`Attendance data updated: ${currentMonthRecords.length} records this month.`);
+        
+        currentPage = 1; // Reset ទៅទំព័រទី ១ រាល់ពេលទិន្នន័យ update
+        renderHistory(); // ហៅ render បែប Pagination ថ្មី
+        updateButtonState();
         
     }, (error) => {
         console.error("Error listening to attendance:", error);
@@ -717,34 +749,60 @@ function setupAttendanceListener() {
     });
 }
 
+// << ថ្មី: ជំនួស Function ទាំងមូល >>
 function renderHistory() {
-    historyTableBody.innerHTML = ''; 
-    const todayString = getTodayDateString();
-
-    const todayRecord = globalAttendanceList.find(record => record.date === todayString);
-
-    if (!todayRecord) {
-        historyTableBody.appendChild(noHistoryRow); 
+    historyTableBody.innerHTML = ''; // Clear table
+    
+    if (noHistoryRow) {
+         noHistoryRow.cells[0].textContent = "មិនទាន់មានទិន្នន័យ";
+    }
+    
+    if (currentMonthRecords.length === 0) {
+        if (noHistoryRow) historyTableBody.appendChild(noHistoryRow);
+        
+        // Update pagination UI
+        pageIndicator.textContent = 'ទំព័រ 1 / 1';
+        prevPageButton.disabled = true;
+        nextPageButton.disabled = true;
         return;
     }
 
-    const checkInTime = todayRecord.checkIn || '---';
-    const checkOutTime = todayRecord.checkOut ? todayRecord.checkOut : '<span class="text-gray-400">មិនទាន់ចេញ</span>';
-    const formattedDate = todayRecord.formattedDate || todayRecord.date; 
+    // --- ថ្មី: គណនា Pagination ---
+    const totalPages = Math.ceil(currentMonthRecords.length / itemsPerPage);
     
-    const row = document.createElement('tr');
-    row.className = 'hover:bg-gray-50'; 
-    row.innerHTML = `
-        <td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-800">${formattedDate}</td>
-        <td class="px-4 py-3 whitespace-nowrap text-sm text-green-600 font-semibold">${checkInTime}</td>
-        <td class="px-4 py-3 whitespace-nowrap text-sm ${todayRecord.checkOut ? 'text-red-600 font-semibold' : ''}">${checkOutTime}</td>
-    `;
-    historyTableBody.appendChild(row);
+    // គណនា Index សម្រាប់កាត់ទិន្នន័យ (slice)
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    
+    const pageRecords = currentMonthRecords.slice(startIndex, endIndex);
+
+    // បង្កើត HTML សម្រាប់ទំព័របច្ចុប្បន្ន
+    pageRecords.forEach(record => {
+        const checkInTime = record.checkIn || '---';
+        const checkOutTime = record.checkOut ? record.checkOut : '<span class="text-gray-400">មិនទាន់ចេញ</span>';
+        const formattedDate = record.formattedDate || record.date;
+
+        const row = document.createElement('tr');
+        row.className = 'hover:bg-gray-50';
+        row.innerHTML = `
+            <td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-800">${formattedDate}</td>
+            <td class="px-4 py-3 whitespace-nowrap text-sm text-green-600 font-semibold">${checkInTime}</td>
+            <td class="px-4 py-3 whitespace-nowrap text-sm ${record.checkOut ? 'text-red-600 font-semibold' : ''}">${checkOutTime}</td>
+        `;
+        historyTableBody.appendChild(row);
+    });
+
+    // --- ថ្មី: Update Pagination UI ---
+    pageIndicator.textContent = `ទំព័រ ${currentPage} / ${totalPages}`;
+    prevPageButton.disabled = (currentPage === 1);
+    nextPageButton.disabled = (currentPage === totalPages);
 }
 
 function updateButtonState() {
     const todayString = getTodayDateString();
-    const todayData = globalAttendanceList.find(record => record.date === todayString);
+    
+    // << បានកែប្រែ: ប្រើ currentMonthRecords >>
+    const todayData = currentMonthRecords.find(record => record.date === todayString);
     
     const canCheckIn = checkShiftTime(currentUserShift, 'checkIn');
     const canCheckOut = checkShiftTime(currentUserShift, 'checkOut');
@@ -996,6 +1054,22 @@ cameraCloseButton.addEventListener('click', hideCameraModal);
 
 // ប៊ូតុងថត ហៅ handleCaptureAndAnalyze
 captureButton.addEventListener('click', handleCaptureAndAnalyze);
+
+// << ថ្មី: Pagination Event Listeners >>
+prevPageButton.addEventListener('click', () => {
+    if (currentPage > 1) {
+        currentPage--;
+        renderHistory();
+    }
+});
+
+nextPageButton.addEventListener('click', () => {
+    const totalPages = Math.ceil(currentMonthRecords.length / itemsPerPage);
+    if (currentPage < totalPages) {
+        currentPage++;
+        renderHistory();
+    }
+});
 
 
 // --- Initial Call ---
