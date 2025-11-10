@@ -18,7 +18,7 @@ import {
 // --- Global Variables ---
 let db, auth;
 let allEmployees = [];
-let currentMonthRecords = []; // << បានប្តូរឈ្មោះពី globalAttendanceList
+let currentMonthRecords = []; 
 let currentUser = null;
 let currentUserShift = null;
 let attendanceCollectionRef = null;
@@ -171,7 +171,7 @@ function hideMessage() {
     currentConfirmCallback = null; 
 }
 
-// << ថ្មី: បានកែ Bug Timezone >>
+// << បានកែ Bug Timezone >>
 function getTodayDateString(date = new Date()) {
     const year = date.getFullYear();
     const month = String(date.getMonth() + 1).padStart(2, '0'); // 0-11 -> 01-12
@@ -179,7 +179,7 @@ function getTodayDateString(date = new Date()) {
     return `${year}-${month}-${day}`;
 }
 
-// << ថ្មី: បានកែ Bug Timezone >>
+// << បានកែ Bug Timezone >>
 function getCurrentMonthRange() {
     const now = new Date();
     const year = now.getFullYear();
@@ -708,7 +708,7 @@ function logout() {
     changeView('employeeListView');
 }
 
-// << ថ្មី: បានកែប្រែ (បានបន្ថែម Sort ត្រឡប់មកវិញ) >>
+// << ថ្មី: ជំនួស Function ទាំងមូល (បានកែប្រែ Sort Logic) >>
 function setupAttendanceListener() {
     if (!attendanceCollectionRef) return;
     
@@ -735,10 +735,33 @@ function setupAttendanceListener() {
             record.date >= startOfMonth && record.date <= endOfMonth
         );
         
-        // --- *** នេះគឺជាកូដ SORT ដ៏សំខាន់! (បានជួសជុល) *** ---
-        // (តម្រៀបពីថ្មីទៅចាស់ ផ្អែកលើ 'date' string)
-        currentMonthRecords.sort((a, b) => (b.date || "").localeCompare(a.date || ""));
-        // --- *********************************************** ---
+        // --- *** នេះគឺជាកូដ SORT ថ្មី តាមការស្នើសុំ! (បានជួសជុល) *** ---
+    
+        // 1. យកកាលបរិច្ឆេទថ្ងៃនេះ
+        const todayString = getTodayDateString(); 
+
+        currentMonthRecords.sort((a, b) => {
+            const aDate = a.date || "";
+            const bDate = b.date || "";
+
+            // 2. ពិនិត្យមើលថា តើ a ឬ b ជា "ថ្ងៃនេះ"
+            const isAToday = (aDate === todayString);
+            const isBToday = (bDate === todayString);
+
+            // 3. Logic ថ្មី:
+            if (isAToday && !isBToday) {
+                // A គឺជាថ្ងៃនេះ, B មិនមែន. A ត្រូវនៅខាងលើគេ (return -1)
+                return -1;
+            } else if (!isAToday && isBToday) {
+                // B គឺជាថ្ងៃនេះ, A មិនមែន. B ត្រូវនៅខាងលើគេ (return 1)
+                return 1;
+            } else {
+                // ករណីផ្សេងទៀត (ទាំងពីរជាថ្ងៃនេះ ឬ ទាំងពីរមិនមែនថ្ងៃនេះ)
+                // ប្រើការតម្រៀបពីធំទៅតូច (Descending) ដូចដើម
+                return bDate.localeCompare(aDate);
+            }
+        });
+        // --- **************************************************** ---
 
         console.log(`Attendance data updated: ${currentMonthRecords.length} records this month (Sorted).`);
         
