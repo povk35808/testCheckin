@@ -728,17 +728,17 @@ function setupAttendanceListener() {
             allRecords.push(doc.data());
         });
 
-        // ត្រង (Filter) យកតែខែបច្ចុប្បន្ន
+        // --- ត្រង (Filter) យកតែខែបច្ចុប្បន្ន ---
         const { startOfMonth, endOfMonth } = getCurrentMonthRange();
         
         currentMonthRecords = allRecords.filter(record => 
             record.date >= startOfMonth && record.date <= endOfMonth
         );
         
-        // --- *** នេះគឺជាកូដ SORT ដ៏សំខាន់! *** ---
+        // --- *** នេះគឺជាកូដ SORT ដ៏សំខាន់! (បានជួសជុល) *** ---
         // (តម្រៀបពីថ្មីទៅចាស់ ផ្អែកលើ 'date' string)
         currentMonthRecords.sort((a, b) => (b.date || "").localeCompare(a.date || ""));
-        // --- ********************************* ---
+        // --- *********************************************** ---
 
         console.log(`Attendance data updated: ${currentMonthRecords.length} records this month (Sorted).`);
         
@@ -775,6 +775,7 @@ function renderHistory() {
         // --- ថ្មី: Logic សម្រាប់ Check-In (ដោះស្រាយ "ច្បាប់") ---
         let checkInDisplay;
         if (record.checkIn) {
+            // ពិនិត្យមើលថាតើវាជាម៉ោង (មាន AM/PM) ឬជា Text (ដូចជា "ច្បាប់")
             if (record.checkIn.includes('AM') || record.checkIn.includes('PM')) {
                 // នេះគឺជាម៉ោងធម្មតា
                 checkInDisplay = `<span class="text-green-600 font-semibold">${record.checkIn}</span>`;
@@ -790,6 +791,7 @@ function renderHistory() {
         // --- ថ្មី: Logic សម្រាប់ Check-Out (ដោះស្រាយ "ច្បាប់") ---
         let checkOutDisplay;
         if (record.checkOut) {
+            // ពិនិត្យមើលថាតើវាជាម៉ោង (មាន AM/PM) ឬជា Text (ដូចជា "ច្បាប់")
             if (record.checkOut.includes('AM') || record.checkOut.includes('PM')) {
                 // នេះគឺជាម៉ោងធម្មតា
                 checkOutDisplay = `<span class="text-red-600 font-semibold">${record.checkOut}</span>`;
