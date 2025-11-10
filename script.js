@@ -12,11 +12,9 @@ import {
     updateDoc,
     collection,
     onSnapshot,
-    setLogLevel,
-    query, // << ថ្មី: នាំចូល Query
-    where, // << ថ្មី: នាំចូល Where
-    orderBy // << ថ្មី: នាំចូល OrderBy
+    setLogLevel
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+// << បានលុប query, where, orderBy
 
 // --- Global Variables ---
 let db, auth;
@@ -35,9 +33,7 @@ let currentScanAction = null; // 'checkIn' or 'checkOut'
 let videoStream = null;
 const FACE_MATCH_THRESHOLD = 0.5;
 
-// --- Pagination State --- // << ថ្មី: អថេរសម្រាប់ Pagination
-let currentPage = 1;
-const itemsPerPage = 12; // ១២ Item ក្នុងមួយទំព័រ
+// << បានលុប Pagination State
 
 // --- Google Sheet Configuration ---
 const SHEET_ID = '1eRyPoifzyvB4oBmruNyXcoKMKPRqjk6xDD6-bPNW6pc';
@@ -103,10 +99,7 @@ const attendanceStatus = document.getElementById('attendanceStatus');
 const historyTableBody = document.getElementById('historyTableBody');
 const noHistoryRow = document.getElementById('noHistoryRow');
 
-// << ថ្មី: DOM Elements សម្រាប់ Pagination >>
-const prevPageButton = document.getElementById('prevPageButton');
-const nextPageButton = document.getElementById('nextPageButton');
-const pageIndicator = document.getElementById('pageIndicator');
+// << បានលុប Pagination DOM Elements
 
 const customModal = document.getElementById('customModal');
 const modalTitle = document.getElementById('modalTitle');
@@ -188,6 +181,22 @@ function getTodayDateString(date = new Date()) {
     return date.toISOString().split('T')[0];
 }
 
+// << ថ្មី: មុខងារជំនួយសម្រាប់យកថ្ងៃទី ១ និងថ្ងៃចុងក្រោយនៃខែ >>
+function getCurrentMonthRange() {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = now.getMonth(); // 0-11
+    
+    // ថ្ងៃទី ១ នៃខែនេះ (ម៉ោង 00:00:00)
+    const startOfMonth = new Date(year, month, 1).toISOString().split('T')[0];
+    
+    // ថ្ងៃចុងក្រោយនៃខែនេះ (ថ្ងៃទី 0 នៃខែបន្ទាប់)
+    const endOfMonth = new Date(year, month + 1, 0).toISOString().split('T')[0];
+
+    return { startOfMonth, endOfMonth };
+}
+
+
 function formatTime(date) {
     if (!date) return '--:--:--';
     try {
@@ -211,8 +220,6 @@ function formatDate(date) {
         return 'Invalid Date';
     }
 }
-
-// (លែងត្រូវការ parseImageUrl ទៀតហើយ)
 
 function checkShiftTime(shiftType, checkType) {
     if (!shiftType || shiftType === 'N/A') {
@@ -560,15 +567,13 @@ async function fetchGoogleSheetData() {
                     return null;
                 }
                 
-                // *** បានកែប្រែ (Update ថ្មី) ***
-                // យក Link ត្រង់ពីជួរឈរ PHOTO (AJ)
                 const photoLink = cells[COL_INDEX.PHOTO]?.v || null;
                 
                 return {
                     id: String(id).trim(),
                     name: cells[COL_INDEX.NAME]?.v || 'N/A',
                     department: cells[COL_INDEX.DEPT]?.v || 'N/A',
-                    photoUrl: photoLink, // <-- ប្រើ Link ត្រង់
+                    photoUrl: photoLink,
                     group: cells[COL_INDEX.GROUP]?.v || 'N/A',
                     gender: cells[COL_INDEX.GENDER]?.v || 'N/A',
                     grade: cells[COL_INDEX.GRADE]?.v || 'N/A',
@@ -691,7 +696,10 @@ function logout() {
     currentMonthRecords = []; // << បានកែប្រែ
     
     historyTableBody.innerHTML = '';
-    if (noHistoryRow) historyTableBody.appendChild(noHistoryRow); // << ត្រូវប្រាកដថា បន្ថែម noHistoryRow វិញ
+    if (noHistoryRow) {
+        noHistoryRow.cells[0].textContent = "មិនទាន់មានទិន្នន័យ";
+        historyTableBody.appendChild(noHistoryRow);
+    }
     searchInput.value = ''; 
     employeeListContainer.classList.add('hidden'); 
     
@@ -711,34 +719,27 @@ function setupAttendanceListener() {
     attendanceStatus.textContent = 'កំពុងទាញប្រវត្តិវត្តមាន...';
     attendanceStatus.className = 'text-center text-sm text-gray-500 pb-4 px-6 h-5 animate-pulse';
 
-    // --- ថ្មី: កំណត់ចន្លោះពេល (Start/End) នៃខែបច្ចុប្បន្ន ---
-    const now = new Date();
-    const year = now.getFullYear();
-    const month = now.getMonth(); // 0-11
-    
-    // ថ្ងៃទី ១ នៃខែនេះ (ម៉ោង 00:00:00)
-    const startOfMonth = new Date(year, month, 1).toISOString().split('T')[0];
-    
-    // ថ្ងៃចុងក្រោយនៃខែនេះ (ថ្ងៃទី 0 នៃខែបន្ទាប់)
-    const endOfMonth = new Date(year, month + 1, 0).toISOString().split('T')[0];
-    
-    console.log(`Listening for records from ${startOfMonth} to ${endOfMonth}`);
-
-    // --- ថ្មី: បង្កើត Query ---
-    const q = query(attendanceCollectionRef,
-        where('date', '>=', startOfMonth),
-        where('date', '<=', endOfMonth),
-        orderBy('date', 'desc') // តម្រៀបពីថ្មីទៅចាស់
-    );
-
-    attendanceListener = onSnapshot(q, (querySnapshot) => {
+    // មិនប្រើ Query ទៀតទេ
+    attendanceListener = onSnapshot(attendanceCollectionRef, (querySnapshot) => {
         
-        currentMonthRecords = querySnapshot.docs.map(doc => doc.data());
+        let allRecords = [];
+        querySnapshot.forEach((doc) => {
+            allRecords.push(doc.data());
+        });
+
+        // --- ថ្មី: ត្រង (Filter) និងតម្រៀប (Sort) នៅក្នុង JavaScript ---
+        const { startOfMonth, endOfMonth } = getCurrentMonthRange();
+        
+        currentMonthRecords = allRecords.filter(record => 
+            record.date >= startOfMonth && record.date <= endOfMonth
+        );
+        
+        // តម្រៀបពីថ្មីទៅចាស់
+        currentMonthRecords.sort((a, b) => (b.date || "").localeCompare(a.date || ""));
 
         console.log(`Attendance data updated: ${currentMonthRecords.length} records this month.`);
         
-        currentPage = 1; // Reset ទៅទំព័រទី ១ រាល់ពេលទិន្នន័យ update
-        renderHistory(); // ហៅ render បែប Pagination ថ្មី
+        renderHistory(); // ហៅ render បែប (មិនមែន) Pagination
         updateButtonState();
         
     }, (error) => {
@@ -759,25 +760,11 @@ function renderHistory() {
     
     if (currentMonthRecords.length === 0) {
         if (noHistoryRow) historyTableBody.appendChild(noHistoryRow);
-        
-        // Update pagination UI
-        pageIndicator.textContent = 'ទំព័រ 1 / 1';
-        prevPageButton.disabled = true;
-        nextPageButton.disabled = true;
         return;
     }
 
-    // --- ថ្មី: គណនា Pagination ---
-    const totalPages = Math.ceil(currentMonthRecords.length / itemsPerPage);
-    
-    // គណនា Index សម្រាប់កាត់ទិន្នន័យ (slice)
-    const startIndex = (currentPage - 1) * itemsPerPage;
-    const endIndex = startIndex + itemsPerPage;
-    
-    const pageRecords = currentMonthRecords.slice(startIndex, endIndex);
-
-    // បង្កើត HTML សម្រាប់ទំព័របច្ចុប្បន្ន
-    pageRecords.forEach(record => {
+    // --- ថ្មី: បង្កើត HTML សម្រាប់ទិន្នន័យ "ទាំងអស់" ក្នុងខែ ---
+    currentMonthRecords.forEach(record => {
         const checkInTime = record.checkIn || '---';
         const checkOutTime = record.checkOut ? record.checkOut : '<span class="text-gray-400">មិនទាន់ចេញ</span>';
         const formattedDate = record.formattedDate || record.date;
@@ -792,10 +779,7 @@ function renderHistory() {
         historyTableBody.appendChild(row);
     });
 
-    // --- ថ្មី: Update Pagination UI ---
-    pageIndicator.textContent = `ទំព័រ ${currentPage} / ${totalPages}`;
-    prevPageButton.disabled = (currentPage === 1);
-    nextPageButton.disabled = (currentPage === totalPages);
+    // << បានលុប UI របស់ Pagination
 }
 
 function updateButtonState() {
@@ -1055,22 +1039,7 @@ cameraCloseButton.addEventListener('click', hideCameraModal);
 // ប៊ូតុងថត ហៅ handleCaptureAndAnalyze
 captureButton.addEventListener('click', handleCaptureAndAnalyze);
 
-// << ថ្មី: Pagination Event Listeners >>
-prevPageButton.addEventListener('click', () => {
-    if (currentPage > 1) {
-        currentPage--;
-        renderHistory();
-    }
-});
-
-nextPageButton.addEventListener('click', () => {
-    const totalPages = Math.ceil(currentMonthRecords.length / itemsPerPage);
-    if (currentPage < totalPages) {
-        currentPage++;
-        renderHistory();
-    }
-});
-
+// << បានលុប Pagination Event Listeners
 
 // --- Initial Call ---
 document.addEventListener('DOMContentLoaded', () => {
