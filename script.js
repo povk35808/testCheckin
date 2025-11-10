@@ -18,7 +18,7 @@ import {
 // --- Global Variables ---
 let db, auth;
 let allEmployees = [];
-let currentMonthRecords = [];
+let currentMonthRecords = []; // << បានប្តូរឈ្មោះពី globalAttendanceList
 let currentUser = null;
 let currentUserShift = null;
 let attendanceCollectionRef = null;
@@ -708,6 +708,7 @@ function logout() {
     changeView('employeeListView');
 }
 
+// << ថ្មី: បានកែប្រែ (បានបន្ថែម Sort ត្រឡប់មកវិញ) >>
 function setupAttendanceListener() {
     if (!attendanceCollectionRef) return;
     
@@ -727,17 +728,19 @@ function setupAttendanceListener() {
             allRecords.push(doc.data());
         });
 
-        // --- ថ្មី: ត្រង (Filter) និងតម្រៀប (Sort) នៅក្នុង JavaScript ---
+        // ត្រង (Filter) យកតែខែបច្ចុប្បន្ន
         const { startOfMonth, endOfMonth } = getCurrentMonthRange();
         
         currentMonthRecords = allRecords.filter(record => 
             record.date >= startOfMonth && record.date <= endOfMonth
         );
         
-        // តម្រៀបពីថ្មីទៅចាស់
+        // --- *** នេះគឺជាកូដ SORT ដ៏សំខាន់! *** ---
+        // (តម្រៀបពីថ្មីទៅចាស់ ផ្អែកលើ 'date' string)
         currentMonthRecords.sort((a, b) => (b.date || "").localeCompare(a.date || ""));
+        // --- ********************************* ---
 
-        console.log(`Attendance data updated: ${currentMonthRecords.length} records this month.`);
+        console.log(`Attendance data updated: ${currentMonthRecords.length} records this month (Sorted).`);
         
         renderHistory(); 
         updateButtonState();
@@ -750,7 +753,7 @@ function setupAttendanceListener() {
     });
 }
 
-// << ថ្មី: ជំនួស Function ទាំងមូល (បន្ថែម Logic អវត្តមាន) >>
+// << ថ្មី: ជំនួស Function ទាំងមូល (ដោះស្រាយ "អវត្តមាន" និង "ច្បាប់") >>
 function renderHistory() {
     historyTableBody.innerHTML = ''; // Clear table
     
@@ -763,22 +766,41 @@ function renderHistory() {
         return;
     }
 
-    // --- ថ្មី: យកកាលបរិច្ឆេទថ្ងៃនេះមកប្រៀបធៀប ---
     const todayString = getTodayDateString();
 
     currentMonthRecords.forEach(record => {
         const formattedDate = record.formattedDate || record.date;
         const isToday = (record.date === todayString);
 
-        // --- ថ្មី: Logic សម្រាប់ Check-In ---
-        const checkInDisplay = record.checkIn
-            ? `<span class="text-green-600 font-semibold">${record.checkIn}</span>` // មានទិន្នន័យ
-            : (isToday ? '---' : '<span class="text-red-500 font-semibold">អវត្តមាន</span>'); // គ្មានទិន្នន័យ
+        // --- ថ្មី: Logic សម្រាប់ Check-In (ដោះស្រាយ "ច្បាប់") ---
+        let checkInDisplay;
+        if (record.checkIn) {
+            if (record.checkIn.includes('AM') || record.checkIn.includes('PM')) {
+                // នេះគឺជាម៉ោងធម្មតា
+                checkInDisplay = `<span class="text-green-600 font-semibold">${record.checkIn}</span>`;
+            } else {
+                // នេះគឺជា "ច្បាប់" ឬអ្វីផ្សេងទៀត
+                checkInDisplay = `<span class="text-blue-600 font-semibold">${record.checkIn}</span>`;
+            }
+        } else {
+            // នេះគឺ null/empty
+            checkInDisplay = isToday ? '---' : '<span class="text-red-500 font-semibold">អវត្តមាន</span>';
+        }
 
-        // --- ថ្មី: Logic សម្រាប់ Check-Out ---
-        const checkOutDisplay = record.checkOut
-            ? `<span class="text-red-600 font-semibold">${record.checkOut}</span>` // មានទិន្នន័យ
-            : (isToday ? '<span class="text-gray-400">មិនទាន់ចេញ</span>' : '<span class="text-red-500 font-semibold">អវត្តមាន</span>'); // គ្មានទិន្នន័យ
+        // --- ថ្មី: Logic សម្រាប់ Check-Out (ដោះស្រាយ "ច្បាប់") ---
+        let checkOutDisplay;
+        if (record.checkOut) {
+            if (record.checkOut.includes('AM') || record.checkOut.includes('PM')) {
+                // នេះគឺជាម៉ោងធម្មតា
+                checkOutDisplay = `<span class="text-red-600 font-semibold">${record.checkOut}</span>`;
+            } else {
+                // នេះគឺជា "ច្បាប់" ឬអ្វីផ្សេងទៀត
+                checkOutDisplay = `<span class="text-blue-600 font-semibold">${record.checkOut}</span>`;
+            }
+        } else {
+            // នេះគឺ null/empty
+            checkOutDisplay = isToday ? '<span class="text-gray-400">មិនទាន់ចេញ</span>' : '<span class="text-red-500 font-semibold">អវត្តមាន</span>';
+        }
 
         const row = document.createElement('tr');
         row.className = 'hover:bg-gray-50';
