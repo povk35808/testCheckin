@@ -124,12 +124,3 @@ body {
     position: relative; 
     z-index: 10; /* ដាក់ z-index ខ្ពស់ជាង header បន្តិច */
 }
-
-/* *** ថ្មី: Styles សម្រាប់ប៊ូតុង Pagination *** */
-.pagination-button {
-    @apply p-1 rounded-md text-gray-600 hover:bg-gray-100 hover:text-gray-800 transition-colors;
-}
-
-.pagination-button:disabled {
-    @apply text-gray-300 cursor-not-allowed hover:bg-transparent;
-}
